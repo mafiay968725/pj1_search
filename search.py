@@ -86,9 +86,31 @@ def depthFirstSearch(problem: SearchProblem):
     print("Is the start a goal?", problem.isGoalState(problem.getStartState()))
     print("Start's successors:", problem.getSuccessors(problem.getStartState()))
     """
-    "*** YOUR CODE HERE ***"
+    # *** YOUR CODE HERE *** 使用栈实现图搜索版的深度优先搜索（返回动作序列）
+    from util import Stack
 
-    util.raiseNotDefined()
+    startState = problem.getStartState()
+    if problem.isGoalState(startState):
+        return []
+
+    frontier = Stack()
+    frontier.push((startState, []))  # (状态, 到达该状态的动作序列)
+    visited = set()
+
+    while not frontier.isEmpty():
+        state, actions = frontier.pop()
+        if state in visited:
+            continue
+        visited.add(state)
+
+        if problem.isGoalState(state):
+            return actions
+
+        for successor, action, stepCost in problem.getSuccessors(state):
+            if successor not in visited:
+                frontier.push((successor, actions + [action]))
+
+    return []
 
 def breadthFirstSearch(problem: SearchProblem):
     """
@@ -105,15 +127,59 @@ def breadthFirstSearch(problem: SearchProblem):
     print("Is the start a goal?", problem.isGoalState(problem.getStartState()))
     print("Start's successors:", problem.getSuccessors(problem.getStartState()))
     """
-    "*** YOUR CODE HERE ***"
-    print("Is the start a goal?", problem.isGoalState(problem.getStartState()))
-    util.raiseNotDefined()
+    # *** YOUR CODE HERE *** 使用队列实现图搜索版的广度优先搜索（返回动作序列）
+    from util import Queue
+
+    startState = problem.getStartState()
+    if problem.isGoalState(startState):
+        return []
+
+    frontier = Queue()
+    frontier.push((startState, []))
+    visited = set([startState])
+
+    while not frontier.isEmpty():
+        state, actions = frontier.pop()
+        if problem.isGoalState(state):
+            return actions
+
+        for successor, action, stepCost in problem.getSuccessors(state):
+            if successor not in visited:
+                visited.add(successor)
+                frontier.push((successor, actions + [action]))
+
+    return []
 
 def uniformCostSearch(problem: SearchProblem):
     """Search the node of least total cost first."""
-    "*** YOUR CODE HERE ***"
+    # *** YOUR CODE HERE *** 使用优先队列实现一致代价搜索（按累计代价升序）
+    from util import PriorityQueue
 
-    util.raiseNotDefined()
+    startState = problem.getStartState()
+    if problem.isGoalState(startState):
+        return []
+
+    frontier = PriorityQueue()
+    frontier.push((startState, [], 0), 0)  # (状态, 动作序列, g)
+    bestG = {}
+
+    while not frontier.isEmpty():
+        state, actions, g = frontier.pop()
+
+        # 若已有更优 g，跳过
+        if state in bestG and bestG[state] <= g:
+            continue
+        bestG[state] = g
+
+        if problem.isGoalState(state):
+            return actions
+
+        for successor, action, stepCost in problem.getSuccessors(state):
+            newG = g + stepCost
+            if successor not in bestG or newG < bestG[successor]:
+                frontier.push((successor, actions + [action], newG), newG)
+
+    return []
 
 def nullHeuristic(state, problem=None):
     """
@@ -126,9 +192,35 @@ def aStarSearch(problem: SearchProblem, heuristic=nullHeuristic):
     """
     Q2 A*
     Search the node that has the lowest combined cost and heuristic first."""
-    "*** YOUR CODE HERE ***"
+    # *** YOUR CODE HERE *** A* 搜索：f(n) = g(n) + h(n)
+    from util import PriorityQueue
 
-    util.raiseNotDefined()
+    startState = problem.getStartState()
+    if problem.isGoalState(startState):
+        return []
+
+    frontier = PriorityQueue()
+    startH = heuristic(startState, problem)
+    frontier.push((startState, [], 0), startH)
+    bestG = {}
+
+    while not frontier.isEmpty():
+        state, actions, g = frontier.pop()
+
+        if state in bestG and bestG[state] <= g:
+            continue
+        bestG[state] = g
+
+        if problem.isGoalState(state):
+            return actions
+
+        for successor, action, stepCost in problem.getSuccessors(state):
+            newG = g + stepCost
+            f = newG + heuristic(successor, problem)
+            if successor not in bestG or newG < bestG[successor]:
+                frontier.push((successor, actions + [action], newG), f)
+
+    return []
 
 
 # Abbreviations

@@ -327,7 +327,14 @@ class CornersProblem(search.SearchProblem):
             #   nextx, nexty = int(x + dx), int(y + dy)
             #   hitsWall = self.walls[nextx][nexty]
 
-            "*** YOUR CODE HERE ***"
+            # *** YOUR CODE HERE *** 生成后继：移动一步、更新未访问角列表，代价为1
+            x, y = state[0]
+            dx, dy = Actions.directionToVector(action)
+            nextx, nexty = int(x + dx), int(y + dy)
+            if not self.walls[nextx][nexty]:
+                nextPos = (nextx, nexty)
+                remainingCorners = tuple(c for c in state[1] if c != nextPos)
+                successors.append(((nextPos, remainingCorners), action, 1))
 
         self._expanded += 1 # DO NOT CHANGE
         return successors
@@ -363,7 +370,26 @@ def cornersHeuristic(state: Any, problem: CornersProblem):
     walls = problem.walls # These are the walls of the maze, as a Grid (game.py)
 
     "*** YOUR CODE HERE ***"
-    return 0 # Default to trivial solution
+    position, remaining = state
+
+    # 没角点剩余
+    if not remaining:
+        return 0
+
+    # 计算从当前位置到各剩余角的曼哈顿距离的最小值
+    d_to_any = min(abs(position[0]-c[0]) + abs(position[1]-c[1]) for c in remaining)
+
+    # 计算剩余角之间的最大两点曼哈顿距离，作为覆盖所有角的最少需要的“最后一段”下界
+    max_pair = 0
+    rem_list = list(remaining)
+    for i in range(len(rem_list)):
+        for j in range(i+1, len(rem_list)):
+            dij = abs(rem_list[i][0]-rem_list[j][0]) + abs(rem_list[i][1]-rem_list[j][1])
+            if dij > max_pair:
+                max_pair = dij
+
+    # 下界 = 到最近角的距离 + 角集中最大两点间距离
+    return d_to_any + max_pair
 
 class AStarCornersAgent(SearchAgent):
     "A SearchAgent for FoodSearchProblem using A* and your foodHeuristic"
@@ -455,9 +481,34 @@ def foodHeuristic(state: Tuple[Tuple, List[List]], problem: FoodSearchProblem):
     Subsequent calls to this heuristic can access
     problem.heuristicInfo['wallCount']
     """
+    # *** YOUR CODE HERE *** 启发函数：返回从当前位置到任一剩余食物的最大迷宫距离（带缓存）
+    from functools import lru_cache
+
     position, foodGrid = state
-    "*** YOUR CODE HERE ***"
-    return 0
+    foodList = foodGrid.asList()
+    if not foodList:
+        return 0
+
+    # 缓存 pairwise 迷宫距离，避免重复计算
+    if 'mazeDistCache' not in problem.heuristicInfo:
+        problem.heuristicInfo['mazeDistCache'] = {}
+    cache = problem.heuristicInfo['mazeDistCache']
+
+    def cachedMazeDistance(a, b):
+        key = (a, b) if a <= b else (b, a)
+        if key in cache:
+            return cache[key]
+        dist = mazeDistance(a, b, problem.startingGameState)
+        cache[key] = dist
+        return dist
+
+    # 取当前位置到所有食物点的最大迷宫距离作为下界（可采纳、通常一致）
+    maxDist = 0
+    for food in foodList:
+        d = cachedMazeDistance(position, food)
+        if d > maxDist:
+            maxDist = d
+    return maxDist
 
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"
@@ -488,7 +539,8 @@ class ClosestDotSearchAgent(SearchAgent):
         problem = AnyFoodSearchProblem(gameState)
 
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        # *** YOUR CODE HERE *** 使用 BFS 在 AnyFoodSearchProblem 上寻找最近食物的路径
+        return search.bfs(problem)
 
 class AnyFoodSearchProblem(PositionSearchProblem):
     """
